@@ -75,7 +75,9 @@ class EmbeddingCache:
             return row
 
         # 2. call the embedding endpoint with exponential-backoff retry
+        text_preview = text[:200].replace("\n", " ")
         delay = self.initial_delay
+        last_error: Optional[Exception] = None
         for attempt in range(self.max_retries):
             try:
                 request = {"input": text, "model": self.model_name}
@@ -84,22 +86,54 @@ class EmbeddingCache:
                 emb: List[float] = rsp.data[0].embedding  # type: ignore[index]
                 self._insert(text_hash, text, emb)
                 return emb
-            except RateLimitError:
+            except (RateLimitError, APIError) as e:
+                last_error = e
                 logger.warning(
-                    f"Rate limited (attempt {attempt + 1}/{self.max_retries}). Retry in {delay:.1f}s"
-                )
-            except APIError as e:
-                logger.warning(
-                    f"API error (attempt {attempt + 1}/{self.max_retries}): {e}. Retry in {delay:.1f}s"
+                    f"Embedding API error (attempt {attempt + 1}/{self.max_retries}), "
+                    f"retry in {delay:.1f}s | {self._describe_error(e)} | "
+                    f"model={self.model_name} | text[:200]={text_preview!r}"
                 )
             except Exception as e:
-                logger.error(f"Unexpected error — abort: {e}")
+                last_error = e
+                logger.exception(
+                    f"Embedding unexpected error — abort | {self._describe_error(e)} | "
+                    f"model={self.model_name} | text[:200]={text_preview!r}"
+                )
                 raise
 
             time.sleep(delay)
             delay *= 2
 
-        raise RuntimeError(f"Failed to get embedding after {self.max_retries} retries.")
+        logger.error(
+            f"Embedding failed after {self.max_retries} retries | "
+            f"last error: {self._describe_error(last_error)} | "
+            f"model={self.model_name} | text[:200]={text_preview!r}"
+        )
+        raise RuntimeError(
+            f"Failed to get embedding after {self.max_retries} retries: "
+            f"{self._describe_error(last_error)}"
+        ) from last_error
+
+    @staticmethod
+    def _describe_error(error: Optional[Exception]) -> str:
+        """Build a detailed, single-line description of an embedding API error,
+        pulling status code / request id / response body when available."""
+        if error is None:
+            return "unknown error"
+        parts = [f"type={type(error).__name__}", f"msg={error}"]
+        for attr in ("status_code", "code", "request_id"):
+            value = getattr(error, attr, None)
+            if value is not None:
+                parts.append(f"{attr}={value}")
+        body = getattr(error, "body", None)
+        if body is not None:
+            parts.append(f"body={str(body)[:500]}")
+        response = getattr(error, "response", None)
+        if response is not None:
+            text = getattr(response, "text", None)
+            if text:
+                parts.append(f"response={str(text)[:500]}")
+        return " ".join(parts)
 
     def has(self, text: str) -> bool:
         """Return True if *text* is already cached (no API call)."""
