@@ -36,12 +36,20 @@ class EmbeddingCache:
         max_retries: int = 5,
         initial_delay: float = 1.0,
         raw_log_path: Optional[str | os.PathLike] = None,
+        proxy: Optional[str] = None,
     ) -> None:
         self.model_name = model_name
         self.max_retries = max_retries
         self.initial_delay = initial_delay
 
-        self._client = OpenAI(base_url=base_url, api_key=api_key)
+        # Optional HTTP/HTTPS proxy. When given, route the OpenAI client through a
+        # custom httpx client; otherwise let openai use its default (which still
+        # honours HTTP_PROXY/HTTPS_PROXY env vars).
+        http_client = self._make_http_client(proxy) if proxy else None
+        if http_client is not None:
+            self._client = OpenAI(base_url=base_url, api_key=api_key, http_client=http_client)
+        else:
+            self._client = OpenAI(base_url=base_url, api_key=api_key)
 
         cache_path = Path(cache_dir)
         cache_path.mkdir(parents=True, exist_ok=True)
@@ -96,6 +104,16 @@ class EmbeddingCache:
     def has(self, text: str) -> bool:
         """Return True if *text* is already cached (no API call)."""
         return self._select(hashlib.md5(text.encode()).hexdigest()) is not None
+
+    @staticmethod
+    def _make_http_client(proxy: str):
+        """Build an httpx client routed through *proxy*, tolerant to httpx versions
+        (httpx>=0.26 uses `proxy=`, older uses `proxies=`)."""
+        import httpx
+        try:
+            return httpx.Client(proxy=proxy)
+        except TypeError:
+            return httpx.Client(proxies=proxy)
 
     # ------------------------------------------------------------------
     # raw audit logging

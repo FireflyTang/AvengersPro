@@ -18,6 +18,11 @@ EMBEDDING_MAX_WORKERS = 4              # concurrency (drives ThreadPoolExecutor)
 EMBEDDING_MAX_RETRIES = 5              # automatic retries on API error
 EMBEDDING_RETRY_INITIAL_DELAY = 1.0   # initial backoff seconds (exponential x2)
 
+# Optional HTTP/HTTPS proxy for reaching the embedding endpoint. None = no proxy.
+# Example: "http://user:pass@proxy.host:8080". Falls back to the standard
+# HTTP_PROXY / HTTPS_PROXY environment variables when left as None.
+EMBEDDING_PROXY = os.getenv("EMBEDDING_PROXY") or None
+
 # Raw request/response audit log. Each real API call (cache miss) appends one
 # JSONL line with the original request and the full original response.
 # Set to None to disable. NOTE: raw responses contain full vectors -> large file.

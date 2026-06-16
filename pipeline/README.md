@@ -56,6 +56,7 @@ Inference (`INFER_INPUT_PATH`, JSONL):
 | `EMBEDDING_MAX_WORKERS` | embedding concurrency |
 | `EMBEDDING_MAX_RETRIES` / `EMBEDDING_RETRY_INITIAL_DELAY` | retry policy (exponential backoff) |
 | `EMBEDDING_RAW_LOG_PATH` | JSONL audit log of raw request/response (`None` to disable) |
+| `EMBEDDING_PROXY` | optional HTTP/HTTPS proxy URL for the embedding endpoint (`None` = no proxy; also honors `HTTP_PROXY`/`HTTPS_PROXY` env) |
 
 ## Predicted correctness
 

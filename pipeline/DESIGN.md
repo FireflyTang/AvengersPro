@@ -50,6 +50,7 @@ EMBEDDING_MAX_WORKERS = 4                  # 并发数(驱动 ThreadPoolExecutor
 EMBEDDING_MAX_RETRIES = 5                  # 报错自动重试次数
 EMBEDDING_RETRY_INITIAL_DELAY = 1.0        # 重试初始退避秒数(指数退避 ×2)
 EMBEDDING_RAW_LOG_PATH = ".cache/embedding_raw_log.jsonl"  # 原始请求/返回留存(None=关闭)
+EMBEDDING_PROXY = None                      # 可选 http/https 代理(None=不走代理;也读 HTTP_PROXY/HTTPS_PROXY)
 CACHE_DIR = ".cache"                        # SQLite 缓存目录
 
 # --- 数据路径 ---

@@ -174,6 +174,7 @@ def main() -> None:
         max_retries=config.EMBEDDING_MAX_RETRIES,
         initial_delay=config.EMBEDDING_RETRY_INITIAL_DELAY,
         raw_log_path=config.EMBEDDING_RAW_LOG_PATH,
+        proxy=config.EMBEDDING_PROXY,
     )
 
     # Decide split: TRAIN_RATIO >= 1.0 -> train on everything, no evaluation.
