@@ -71,6 +71,7 @@ class Router:
             initial_delay=config.EMBEDDING_RETRY_INITIAL_DELAY,
             raw_log_path=config.EMBEDDING_RAW_LOG_PATH,
             proxy=config.EMBEDDING_PROXY,
+            verify_ssl=config.EMBEDDING_VERIFY_SSL,
         )
 
     def predict(self, query: str) -> Dict[str, float]:

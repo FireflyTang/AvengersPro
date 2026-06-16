@@ -37,16 +37,18 @@ class EmbeddingCache:
         initial_delay: float = 1.0,
         raw_log_path: Optional[str | os.PathLike] = None,
         proxy: Optional[str] = None,
+        verify_ssl: bool = True,
     ) -> None:
         self.model_name = model_name
         self.max_retries = max_retries
         self.initial_delay = initial_delay
 
-        # Optional HTTP/HTTPS proxy. When given, route the OpenAI client through a
-        # custom httpx client; otherwise let openai use its default (which still
-        # honours HTTP_PROXY/HTTPS_PROXY env vars).
-        http_client = self._make_http_client(proxy) if proxy else None
-        if http_client is not None:
+        # A custom httpx client is needed when a proxy is set OR when HTTPS
+        # certificate verification is disabled (e.g. self-signed internal cert).
+        # Otherwise let openai use its default client (which still honours
+        # HTTP_PROXY/HTTPS_PROXY env vars and verifies certificates).
+        if proxy or not verify_ssl:
+            http_client = self._make_http_client(proxy=proxy, verify=verify_ssl)
             self._client = OpenAI(base_url=base_url, api_key=api_key, http_client=http_client)
         else:
             self._client = OpenAI(base_url=base_url, api_key=api_key)
@@ -153,14 +155,16 @@ class EmbeddingCache:
         return self._select(hashlib.md5(text.encode()).hexdigest()) is not None
 
     @staticmethod
-    def _make_http_client(proxy: str):
-        """Build an httpx client routed through *proxy*, tolerant to httpx versions
-        (httpx>=0.26 uses `proxy=`, older uses `proxies=`)."""
+    def _make_http_client(proxy: Optional[str] = None, verify: bool = True):
+        """Build an httpx client with optional *proxy* and TLS *verify* flag,
+        tolerant to httpx versions (httpx>=0.26 uses `proxy=`, older `proxies=`)."""
         import httpx
+        if not proxy:
+            return httpx.Client(verify=verify)
         try:
-            return httpx.Client(proxy=proxy)
+            return httpx.Client(proxy=proxy, verify=verify)
         except TypeError:
-            return httpx.Client(proxies=proxy)
+            return httpx.Client(proxies=proxy, verify=verify)
 
     # ------------------------------------------------------------------
     # raw audit logging

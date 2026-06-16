@@ -23,6 +23,10 @@ EMBEDDING_RETRY_INITIAL_DELAY = 1.0   # initial backoff seconds (exponential x2)
 # HTTP_PROXY / HTTPS_PROXY environment variables when left as None.
 EMBEDDING_PROXY = os.getenv("EMBEDDING_PROXY") or None
 
+# Verify the HTTPS certificate of the embedding endpoint. Set to False for
+# self-signed / internal endpoints (env EMBEDDING_VERIFY_SSL=false also disables).
+EMBEDDING_VERIFY_SSL = os.getenv("EMBEDDING_VERIFY_SSL", "true").lower() not in ("false", "0", "no")
+
 # Raw request/response audit log. Each real API call (cache miss) appends one
 # JSONL line with the original request and the full original response.
 # Set to None to disable. NOTE: raw responses contain full vectors -> large file.
