@@ -133,6 +133,19 @@ class EmbeddingCache:
             text = getattr(response, "text", None)
             if text:
                 parts.append(f"response={str(text)[:500]}")
+        # Network errors (e.g. openai.APIConnectionError "Connection error.") carry
+        # no HTTP body; the real reason is the wrapped httpx/socket exception in the
+        # __cause__/__context__ chain — walk it so the actual cause is visible.
+        cause = error.__cause__ or error.__context__
+        depth = 0
+        seen: set = set()
+        while cause is not None and depth < 5:
+            entry = f"caused_by={type(cause).__name__}: {cause}"
+            if entry not in seen:  # skip httpx->httpcore->socket duplicates
+                seen.add(entry)
+                parts.append(entry)
+            cause = cause.__cause__ or cause.__context__
+            depth += 1
         return " ".join(parts)
 
     def has(self, text: str) -> bool:
